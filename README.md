@@ -1,27 +1,32 @@
-# Architecture Specs
+# Architecture Decision Records
 
-Feature specs live here. Each spec is created and reviewed **before implementation begins**.
+This directory contains ADRs for the Personal Knowledge Graph project.
 
-Specs capture intent, open questions, and design decisions for a specific feature. Once implemented, the spec is marked delivered with a date. Full architectural decisions are in `docs/adr/`.
+ADRs serve two purposes:
+- **Accepted** ADRs — decisions in effect, shaping the codebase
+- **Proposed** ADRs — design intent under discussion, serving as the feature spec before implementation begins
+
+There are no separate feature spec files. A `Proposed` ADR IS the spec. When the design is settled and implementation is ready to begin, the ADR moves to `Accepted` and a GitHub Epic + Issues are created.
+
+Check the status field before relying on any decision. See `AGENTS.md` for the full workflow.
 
 ## Index
 
-| Spec | Feature | Status |
-|---|---|---|
-| *(none yet)* | — | — |
+| ADR | Title | Status | GitHub Epic |
+|---|---|---|---|
+| [ADR-001](ADR-001-knowledge-store-selection.md) | Knowledge Store Selection | Accepted | — |
+| [ADR-002](ADR-002-note-taxonomy-design.md) | Note Taxonomy Design | Accepted | — |
+| [ADR-003](ADR-003-note-lifecycle-auto-states.md) | Note Lifecycle and Auto-Tagging States | Accepted | — |
+| [ADR-004](ADR-004-capture-architecture.md) | Capture Architecture | Accepted | — |
+| [ADR-005](ADR-005-wikilink-conversion-strategy.md) | Wikilink Conversion Strategy | Proposed | — |
+| [ADR-006](ADR-006-logseq-vault-note-mapping.md) | Logseq to Vault Note Mapping | Accepted | — |
+| [ADR-007](ADR-007-agent-architecture-observability.md) | Agent Architecture and Inference Observability | Proposed | — |
+| [ADR-008](ADR-008-infrastructure-hosting.md) | Infrastructure and Hosting | Accepted | — |
+| [ADR-009](ADR-009-triage-tool-platform-strategy.md) | Triage Tool Platform Strategy | Accepted | — |
 
-## How to use this directory
+## Status definitions
 
-1. Create `<feature-name>.md` here before writing any code
-2. Review the spec — surface open questions, gather real data
-3. Update `AGENTS.md` feature progress when implementation starts
-4. Mark as `Delivered: YYYY-MM-DD` here when the feature is complete
-
-## Planned specs (not yet written)
-
-- `fastapi-capture-service.md` — POST /capture endpoint, daily note append, vault write logic
-- `whisper-transcription-pipeline.md` — audio capture trigger, HFP activation, Whisper model, nixbox vs Pi
-- `automated-ingest-pipeline.md` — Logseq export conversion, taxonomy-aware wikilink handling, auto-tagging
-- `git-versioning-setup.md` — bare repos on nixbox, nightly systemd timer, gitignore conventions
-- `pwa-triage-app.md` — PWA manifest, service worker, VPS queue integration (v2)
-- `graphrag-agent.md` — RAG + graph traversal, LangFuse observability, Ollama stack (deferred)
+- **Proposed** — design under discussion; this ADR is the active feature spec; implementation has not begun
+- **Accepted** — decision is in effect; GitHub Epic and Issues exist or are being created
+- **Deferred** — acknowledged but not yet decided; no implementation work
+- **Superseded** — replaced by a newer ADR (link provided in the ADR itself)
