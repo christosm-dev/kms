@@ -1,7 +1,7 @@
 # ADR-006: Logseq to Vault Note Mapping
 
 **Date:** 2026-05-06
-**Status:** Accepted
+**Status:** Proposed
 **Supersedes:** —
 
 ## Context

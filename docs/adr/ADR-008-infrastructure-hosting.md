@@ -1,7 +1,7 @@
 # ADR-008: Infrastructure and Hosting
 
 **Date:** 2026-05-06
-**Status:** Accepted
+**Status:** Proposed
 **Supersedes:** —
 
 ## Context

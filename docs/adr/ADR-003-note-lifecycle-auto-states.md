@@ -1,7 +1,7 @@
 # ADR-003: Note Lifecycle and Auto-Tagging States
 
 **Date:** 2026-05-06
-**Status:** Accepted
+**Status:** Proposed
 **Supersedes:** —
 
 ## Context

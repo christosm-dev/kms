@@ -1,7 +1,7 @@
 # ADR-004: Capture Architecture
 
 **Date:** 2026-05-06
-**Status:** Accepted
+**Status:** Proposed 
 **Supersedes:** —
 
 ## Context

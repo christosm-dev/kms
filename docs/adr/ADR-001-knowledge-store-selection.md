@@ -1,7 +1,7 @@
 # ADR-001: Knowledge Store Selection
 
 **Date:** 2026-05-06
-**Status:** Accepted
+**Status:** Proposed
 **Supersedes:** —
 
 ## Context
