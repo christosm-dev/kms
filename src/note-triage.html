@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Note Triage</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --bg-card: #161616;
+    --bg-hover: #1e1e1e;
+    --bg-selected: #1a2a1a;
+    --border: #2a2a2a;
+    --border-selected: #4a7c4a;
+    --text-primary: #e8e8e8;
+    --text-secondary: #888;
+    --text-muted: #555;
+    --accent: #5a9e5a;
+    --accent-dim: #2d4f2d;
+    --danger: #9e5a5a;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --tag-domain: #1e3a2e;
+    --tag-domain-border: #2d6b48;
+    --tag-domain-text: #7ecfa0;
+    --tag-register: #1e2a3a;
+    --tag-register-border: #2d4a6b;
+    --tag-register-text: #7eb3cf;
+    --tag-valence-pos: #2a3a1e;
+    --tag-valence-pos-border: #4a6b2d;
+    --tag-valence-pos-text: #a8cf7e;
+    --tag-valence-neg: #3a1e1e;
+    --tag-valence-neg-border: #6b2d2d;
+    --tag-valence-neg-text: #cf9e7e;
+    --tag-valence-neu: #2a2a2a;
+    --tag-valence-neu-border: #4a4a4a;
+    --tag-valence-neu-text: #aaaaaa;
+    --tag-valence-yellow: #3a3010;
+    --tag-valence-yellow-border: #7a6520;
+    --tag-valence-yellow-text: #e0c060;
+    --tag-valence-blue: #1a2a3a;
+    --tag-valence-blue-border: #2a5080;
+    --tag-valence-blue-text: #80b8e0;
+    --highlight: rgba(90, 158, 90, 0.12);
+    --highlight-border: rgba(90, 158, 90, 0.6);
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    flex-shrink: 0;
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .header-left { display: flex; align-items: baseline; gap: 0.75rem; }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .header-sub { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+
+  .progress-wrap { display: flex; align-items: center; gap: 10px; flex: 1; max-width: 360px; }
+  .progress-bar { flex: 1; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+  .progress-label { font-family: var(--mono); font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
+  .workspace { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+
+  /* MD PANEL */
+  .md-panel {
+    width: 34%;
+    min-width: 200px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .panel-header {
+    flex-shrink: 0;
+    padding: 0.55rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .panel-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .md-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1rem 2rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .md-scroll::-webkit-scrollbar { width: 3px; }
+  .md-scroll::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .md-content {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.85;
+    color: var(--text-secondary);
+  }
+
+  .md-line {
+    display: block;
+    padding: 0px 6px;
+    border-radius: 3px;
+    margin: 0 -6px;
+    border-left: 2px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .md-line.active-note {
+    background: var(--highlight);
+    border-left-color: var(--accent);
+    color: var(--text-primary);
+  }
+
+  .md-heading { color: var(--accent); font-weight: 500; }
+  .md-tag { color: #7eb3cf; }
+  .md-prop { color: var(--text-muted); font-size: 10.5px; }
+
+  /* RESIZE */
+  .resize-handle {
+    width: 5px;
+    background: transparent;
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .resize-handle:hover, .resize-handle.dragging { background: var(--accent-dim); }
+
+  /* TRIAGE PANEL */
+  .triage-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+  .triage-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 270px;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 1.25rem;
+    gap: 1.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  /* NOTE CARD */
+  .note-meta { display: flex; align-items: center; gap: 1rem; }
+  .note-date, .note-index { font-family: var(--mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.04em; }
+
+  .note-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem; }
+
+  .note-text { font-size: 16px; font-weight: 300; line-height: 1.75; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; width: 100%; min-height: 80px; background: transparent; border: none; outline: none; resize: vertical; font-family: var(--sans); padding: 0; }
+
+  .note-source { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+
+  /* TAGS */
+  .tag-section { display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .tag-group-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+
+  .tag-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  .tag { font-family: var(--mono); font-size: 11px; padding: 4px 9px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; transition: all 0.12s ease; user-select: none; }
+
+  .tag.domain { background: var(--tag-domain); color: var(--tag-domain-text); }
+  .tag.domain:hover { border-color: var(--tag-domain-border); }
+  .tag.domain.selected { border-color: var(--tag-domain-border); box-shadow: 0 0 0 1px var(--tag-domain-border); }
+
+  .tag.register { background: var(--tag-register); color: var(--tag-register-text); }
+  .tag.register:hover { border-color: var(--tag-register-border); }
+  .tag.register.selected { border-color: var(--tag-register-border); box-shadow: 0 0 0 1px var(--tag-register-border); }
+
+  .tag.valence-pos { background: var(--tag-valence-pos); color: var(--tag-valence-pos-text); }
+  .tag.valence-pos:hover { border-color: var(--tag-valence-pos-border); }
+  .tag.valence-pos.selected { border-color: var(--tag-valence-pos-border); box-shadow: 0 0 0 1px var(--tag-valence-pos-border); }
+
+  .tag.valence-neg { background: var(--tag-valence-neg); color: var(--tag-valence-neg-text); }
+  .tag.valence-neg:hover { border-color: var(--tag-valence-neg-border); }
+  .tag.valence-neg.selected { border-color: var(--tag-valence-neg-border); box-shadow: 0 0 0 1px var(--tag-valence-neg-border); }
+
+  .tag.valence-neu { background: var(--tag-valence-neu); color: var(--tag-valence-neu-text); }
+  .tag.valence-neu:hover { border-color: var(--tag-valence-neu-border); }
+  .tag.valence-neu.selected { border-color: var(--tag-valence-neu-border); box-shadow: 0 0 0 1px var(--tag-valence-neu-border); }
+
+  .tag.valence-yellow { background: var(--tag-valence-yellow); color: var(--tag-valence-yellow-text); }
+  .tag.valence-yellow:hover { border-color: var(--tag-valence-yellow-border); }
+  .tag.valence-yellow.selected { border-color: var(--tag-valence-yellow-border); box-shadow: 0 0 0 1px var(--tag-valence-yellow-border); }
+
+  .tag.valence-blue { background: var(--tag-valence-blue); color: var(--tag-valence-blue-text); }
+  .tag.valence-blue:hover { border-color: var(--tag-valence-blue-border); }
+  .tag.valence-blue.selected { border-color: var(--tag-valence-blue-border); box-shadow: 0 0 0 1px var(--tag-valence-blue-border); }
+
+  /* ACTIONS */
+  .action-row { display: flex; gap: 8px; margin-top: 0.25rem; }
+
+  button { font-family: var(--mono); font-size: 11px; padding: 7px 14px; border-radius: 3px; border: 1px solid var(--border); cursor: pointer; transition: all 0.12s ease; letter-spacing: 0.04em; background: transparent; }
+
+  .btn-primary { background: var(--accent-dim); color: var(--accent); border-color: var(--border-selected); }
+  .btn-primary:hover { filter: brightness(1.2); }
+  .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .btn-secondary { color: var(--text-secondary); }
+  .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+  .btn-danger { color: var(--danger); border-color: transparent; }
+  .btn-danger:hover { border-color: var(--danger); }
+
+  /* SIDEBAR */
+  .sidebar-section-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.6rem; }
+
+  .preview-tags { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; }
+
+  .preview-tag { font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 2px; color: var(--accent); background: var(--accent-dim); }
+
+  .output-preview { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 0.75rem; font-family: var(--mono); font-size: 10px; color: var(--text-secondary); line-height: 1.7; white-space: pre-wrap; word-break: break-all; }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; }
+  .stat-value { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--text-primary); }
+  .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+  /* FOOTER */
+  footer { flex-shrink: 0; padding: 0.65rem 1.5rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+
+  .kbd-hints { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .kbd-hint { font-family: var(--mono); font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+  kbd { background: var(--bg-card); border: 1px solid var(--border); border-radius: 2px; padding: 1px 5px; font-size: 10px; color: var(--text-secondary); }
+
+  .export-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent-dim); font-family: var(--mono); font-size: 11px; padding: 5px 14px; border-radius: 3px; cursor: pointer; transition: all 0.15s; }
+  .export-btn:hover { background: var(--accent-dim); }
+
+  /* STATES */
+  .virtue-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+
+  .virtue-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    width: 170px;
+    flex-shrink: 0;
+    cursor: help;
+  }
+
+  .virtue-slider {
+    flex: 1;
+    accent-color: var(--accent);
+    cursor: pointer;
+    height: 3px;
+  }
+
+  .virtue-value {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    width: 20px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .virtue-clear {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .virtue-clear:hover { color: var(--danger); }
+
+  .upload-zone { border: 1px dashed var(--border); border-radius: 6px; padding: 2rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .upload-zone:hover { border-color: var(--accent); background: var(--bg-card); }
+  .upload-zone p { color: var(--text-secondary); font-size: 13px; margin-bottom: 0.35rem; }
+  .upload-zone span { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 3rem 2rem; text-align: center; height: 100%; }
+  .empty-state > p { color: var(--text-secondary); font-size: 14px; }
+
+  .done-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; padding: 3rem 2rem; text-align: center; height: 100%; }
+  .done-state h2 { font-weight: 400; font-size: 20px; color: var(--accent); font-family: var(--mono); }
+  .done-state p { color: var(--text-secondary); font-size: 13px; }
+
+  .demo-btn { font-family: var(--mono); font-size: 11px; color: var(--accent); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
+
+  .md-empty { font-family: var(--mono); font-size: 11px; color: var(--text-muted); padding: 2rem 1rem; text-align: center; line-height: 2; }
+
+  #file-input { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span class="logo">triage</span>
+    <span class="header-sub">knowledge graph seed</span>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <span class="progress-label" id="progress-label">0 / 0</span>
+  </div>
+</header>
+
+<div class="workspace">
+
+  <div class="md-panel" id="md-panel">
+    <div class="panel-header">
+      <span class="panel-label">source document</span>
+      <span id="md-filename" style="font-family:var(--mono);font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;"></span>
+    </div>
+    <div class="md-scroll" id="md-scroll">
+      <div class="md-empty" id="md-empty">load a file to see<br>the source document here</div>
+      <div class="md-content" id="md-content" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="resize-handle" id="resize-handle"></div>
+
+  <div class="triage-panel">
+    <div class="triage-scroll" id="triage-scroll">
+
+      <div class="empty-state" id="empty-state">
+        <p>Load your Logseq export to begin</p>
+        <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+          <p>Click to load a Markdown file</p>
+          <span>.md export from Logseq</span>
+        </div>
+        <input type="file" id="file-input" accept=".md,.txt">
+        <button class="demo-btn" onclick="loadDemo()">or load demo notes</button>
+      </div>
+
+      <div id="triage-view" style="display:none; flex-direction:column; gap:1.25rem;">
+        <div class="note-meta">
+          <span class="note-date" id="note-date"></span>
+          <span class="note-index" id="note-index"></span>
+        </div>
+
+        <div class="note-card">
+          <textarea class="note-text" id="note-text" oninput="updatePreview()" spellcheck="true"></textarea>
+          <div class="note-source" id="note-source"></div>
+        </div>
+
+        <div class="tag-section">
+          <div class="tag-group-label">Life domain</div>
+          <div class="tag-grid" id="domain-tags"></div>
+        </div>
+
+        <div class="tag-section">
+          <div class="tag-group-label">Reflective register</div>
+          <div class="tag-grid" id="register-tags"></div>
+        </div>
+
+        <div class="tag-section">
+          <div class="tag-group-label">Energy valence</div>
+          <div class="tag-grid" id="valence-tags"></div>
+        </div>
+
+        <div class="tag-section">
+          <div class="tag-group-label">Epistemic state</div>
+          <div class="tag-grid" id="epistemic-tags"></div>
+        </div>
+
+        <div class="tag-section">
+          <div class="tag-group-label">Virtues <span style="color:var(--text-muted);font-size:9px;letter-spacing:0.05em;">— optional · 0–10 · 5 = good enough</span></div>
+          <div id="virtue-sliders"></div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-primary" onclick="saveAndNext()">Save + next</button>
+          <button class="btn-secondary" onclick="skipNote()">Skip</button>
+          <button class="btn-secondary" onclick="undoLast()" id="undo-btn" disabled>Undo</button>
+          <button class="btn-danger" onclick="deleteNote()">Discard</button>
+        </div>
+      </div>
+
+      <div id="done-state" style="display:none;" class="done-state">
+        <h2>// done</h2>
+        <p id="done-summary"></p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+          <button class="export-btn" onclick="exportAll()">Export tagged notes</button>
+          <button class="export-btn" id="export-skipped-btn" onclick="exportSkipped()" style="border-color:#4a3a1e;color:#cf9e7e;">Export skipped notes</button>
+        </div>
+        <p id="done-hint" style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:0.5rem;"></p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div>
+      <div class="sidebar-section-label">Selected tags</div>
+      <div class="preview-tags" id="preview-tags">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">none selected</span>
+      </div>
+    </div>
+    <div>
+      <div class="sidebar-section-label">Obsidian preview</div>
+      <div class="output-preview" id="output-preview">—</div>
+    </div>
+    <div>
+      <div class="sidebar-section-label">Session stats</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value" id="stat-tagged">0</div><div class="stat-label">tagged</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-skipped">0</div><div class="stat-label">skipped</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-discarded">0</div><div class="stat-label">discarded</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-remaining">0</div><div class="stat-label">remaining</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="kbd-hints">
+    <span class="kbd-hint"><kbd>Enter</kbd> save + next &nbsp;|&nbsp; in note: <kbd>Ctrl</kbd><kbd>Enter</kbd></span>
+    <span class="kbd-hint"><kbd>S</kbd> skip</span>
+    <span class="kbd-hint"><kbd>U</kbd> undo</span>
+    <span class="kbd-hint"><kbd>D</kbd> discard</span>
+    <span class="kbd-hint"><kbd>E</kbd> export</span>
+  </div>
+  <button class="export-btn" onclick="exportAll()">Export tagged notes</button>
+</footer>
+
+<script>
+const TAXONOMY = {
+  domains: [
+    { key: 'creativity', label: '#creativity' },
+    { key: 'environment', label: '#environment' },
+    { key: 'finances', label: '#finances' },
+    { key: 'health', label: '#health' },
+    { key: 'learning', label: '#learning' },
+    { key: 'personal-development', label: '#personal-development' },
+    { key: 'professional-development', label: '#professional-development' },
+    { key: 'purpose', label: '#purpose' },
+    { key: 'relationships', label: '#relationships' },
+    { key: 'work', label: '#work' },
+  ],
+  registers: [
+    { key: 'ambiguity', label: '#ambiguity' },
+    { key: 'decision', label: '#decision' },
+    { key: 'eureka', label: '#eureka' },
+    { key: 'follow-up', label: '#follow-up' },
+    { key: 'gratitude', label: '#gratitude' },
+    { key: 'idea', label: '#idea' },
+    { key: 'insight', label: '#insight' },
+    { key: 'intention', label: '#intention' },
+    { key: 'interesting', label: '#interesting' },
+    { key: 'obstacle', label: '#obstacle' },
+    { key: 'pattern', label: '#pattern' },
+    { key: 'question', label: '#question' },
+    { key: 'tension', label: '#tension' },
+  ],
+  valence: [
+    { key: 'draining', label: '#draining', cls: 'valence-neg' },
+    { key: 'neutral', label: '#neutral', cls: 'valence-neu' },
+    { key: 'calming', label: '#calming', cls: 'valence-pos' },
+    { key: 'energising', label: '#energising', cls: 'valence-pos' },
+  ],
+  epistemic: [
+    { key: 'doubtful', label: '#doubtful', cls: 'valence-neg' },
+    { key: 'sceptical', label: '#sceptical', cls: 'valence-neg' },
+    { key: 'indifferent', label: '#indifferent', cls: 'valence-yellow' },
+    { key: 'neutral', label: '#neutral', cls: 'valence-neu' },
+    { key: 'validating', label: '#validating', cls: 'valence-blue' },
+    { key: 'encouraging', label: '#encouraging', cls: 'valence-blue' },
+    { key: 'accommodating', label: '#accommodating', cls: 'valence-pos' },
+    { key: 'rejuvenating', label: '#rejuvenating', cls: 'valence-pos' },
+    { key: 'confident', label: '#confident', cls: 'valence-pos' },
+  ],
+  virtues: [
+    { key: 'anazwogonwtikos', greek: 'αναζωογονητικός', en: 'rejuvenating', label: 'Αναζωογονητικός' },
+    { key: 'iremos', greek: 'ήρεμος', en: 'calm', label: 'Ήρεμος' },
+    { key: 'ipomonetikos', greek: 'υπομονετικός', en: 'patient', label: 'Υπομονετικός' },
+    { key: 'sygkentrwmenos', greek: 'συγκεντρωμένος', en: 'focused', label: 'Συγκεντρωμένος' },
+    { key: 'eklektikos', greek: 'εκλεκτικός', en: 'discerning', label: 'Εκλεκτικός' },
+    { key: 'drastirios', greek: 'δραστήριος', en: 'active', label: 'Δραστήριος' },
+  ]
+};
+
+let notes = [];
+let rawLines = [];
+let currentIndex = 0;
+let results = [];
+let selectedTags = { domains: new Set(), registers: new Set(), valence: new Set(), epistemic: new Set() };
+let virtueRatings = {};
+let stats = { tagged: 0, skipped: 0, discarded: 0 };
+
+const DEMO_RAW = `# Logseq Journal Export
+
+## 2026-01-15
+- Keep postponing the difficult conversation at work because short term comfort feels worse than the long term cost
+  tags:: [[reflection]]
+
+## 2026-01-22
+- Realised I've been defining success by external validation rather than internal alignment. Need to revisit what I actually want.
+  tags:: [[reflection]]
+
+## 2026-02-03
+- The cycling route this morning reminded me how much clarity I get from movement. Schedule it deliberately, not as an afterthought.
+  tags:: [[health]]
+
+## 2026-02-14
+- Why do I find it easier to advocate for others than for myself in salary negotiations?
+  tags:: [[work]]
+
+## 2026-02-28
+- Three weeks into the job search and I notice I'm avoiding roles that feel like a stretch. Fear of rejection or something more?
+  tags:: [[career]]
+
+## 2026-03-08
+- Gratitude for the partner who holds space when I'm spiralling. Easy to take that for granted when under pressure.
+  tags:: [[relationships]]
+
+## 2026-03-15
+- The infrastructure work at Sky was genuinely interesting. I keep gravitating toward systems that have clear contracts and predictable behaviour. That's a clue.
+  tags:: [[work]] [[career]]
+
+## 2026-03-20
+- Spent two hours on a Terraform course when I should have been preparing for the G-Research interview. Classic displacement activity.
+  tags:: [[work]] [[learning]]`;
+
+function loadDemo() {
+  rawLines = DEMO_RAW.split('\n');
+  notes = parseLines(rawLines, 'demo-notes.md');
+  currentIndex = 0; results = []; stats = { tagged: 0, skipped: 0, discarded: 0 };
+  renderMdViewer('demo-notes.md');
+  startTriage();
+}
+
+// Taxonomy vocabulary — must be kept in sync with ADR-005
+const TAXONOMY_TAGS = new Set([
+  // domains
+  'work','finances','health','relationships','learning',
+  'creativity','purpose','environment',
+  'professional-development','personal-development',
+  // registers
+  'insight','pattern','tension','decision','gratitude',
+  'obstacle','intention','question','ambiguity',
+  'idea','eureka','interesting','follow-up',
+  // valence
+  'energising','draining','calming','neutral',
+  // epistemic
+  'certain','validating','doubtful','sceptical',
+  'indifferent','encouraging','accommodating',
+  'rejuvenating','confident'
+]);
+
+function convertWikilinks(text) {
+  // [[Taxonomy Term]] -> #taxonomy-term
+  // [[Concept Page]]  -> [[Concept Page]] (preserved as Obsidian link)
+  return text.replace(/\[\[([^\]]+)\]\]/g, (_, inner) => {
+    const normalised = inner.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    if (TAXONOMY_TAGS.has(normalised)) {
+      return '#' + normalised;       // convert to tag
+    } else {
+      return '[[' + inner.trim() + ']]';  // preserve as Obsidian link
+    }
+  });
+}
+
+function parseLines(lines, filename) {
+  const parsed = [];
+  let currentDate = new Date().toISOString().split('T')[0];
+  lines.forEach((line, lineIndex) => {
+    const dateMatch = line.match(/^#+\s+(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) { currentDate = dateMatch[1]; return; }
+    const trimmed = line.replace(/^[-*]\s+/, '').trim();
+    if (trimmed.length > 20 && !trimmed.startsWith('#') && !trimmed.startsWith('::') && !trimmed.startsWith('tags::')) {
+      parsed.push({ text: convertWikilinks(trimmed), date: currentDate, source: filename || 'logseq-import', lineIndex, id: parsed.length });
+    }
+  });
+  return parsed;
+}
+
+function renderMdViewer(filename) {
+  document.getElementById('md-empty').style.display = 'none';
+  document.getElementById('md-filename').textContent = filename || '';
+  const container = document.getElementById('md-content');
+  container.style.display = 'block';
+  container.innerHTML = rawLines.map((line, i) => {
+    let cls = 'md-line';
+    if (/^#+\s/.test(line)) cls += ' md-heading';
+    else if (/\[\[/.test(line)) cls += ' md-tag';
+    else if (/::/.test(line)) cls += ' md-prop';
+    const safe = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<span class="${cls}" data-line="${i}">${safe || '\u00a0'}</span>`;
+  }).join('\n');
+}
+
+function highlightActiveLine() {
+  document.querySelectorAll('.md-line.active-note').forEach(el => el.classList.remove('active-note'));
+  if (currentIndex >= notes.length) return;
+  const note = notes[currentIndex];
+  if (note.lineIndex === undefined) return;
+  const el = document.querySelector(`.md-line[data-line="${note.lineIndex}"]`);
+  if (!el) return;
+  el.classList.add('active-note');
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    rawLines = ev.target.result.split('\n');
+    notes = parseLines(rawLines, file.name);
+    if (notes.length === 0) { alert('No notes found. Try a Logseq markdown export.'); return; }
+    currentIndex = 0; results = []; stats = { tagged: 0, skipped: 0, discarded: 0 };
+    renderMdViewer(file.name);
+    startTriage();
+  };
+  reader.readAsText(file);
+});
+
+function startTriage() {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('triage-view').style.display = 'flex';
+  renderTagPickers();
+  renderNote();
+  updateStats();
+}
+
+function renderNote() {
+  if (currentIndex >= notes.length) { showDone(); return; }
+  const note = notes[currentIndex];
+  document.getElementById('note-text').value = note.text;
+  document.getElementById('note-date').textContent = note.date || '';
+  document.getElementById('note-index').textContent = `note ${currentIndex + 1} of ${notes.length}`;
+  document.getElementById('note-source').textContent = `source: ${note.source || 'unknown'}`;
+  selectedTags = { domains: new Set(), registers: new Set(), valence: new Set(), epistemic: new Set() };
+  virtueRatings = {};
+  renderVirtues();
+  updateTagVisuals();
+  updatePreview();
+  updateProgress();
+  highlightActiveLine();
+  document.getElementById('undo-btn').disabled = results.length === 0;
+}
+
+function renderTagPickers() {
+  renderGroup('domain-tags', TAXONOMY.domains, 'domain', 'domains');
+  renderGroup('register-tags', TAXONOMY.registers, 'register', 'registers');
+  renderGroup('valence-tags', TAXONOMY.valence, null, 'valence');
+  renderGroup('epistemic-tags', TAXONOMY.epistemic, null, 'epistemic');
+  renderVirtues();
+}
+
+function renderVirtues() {
+  const container = document.getElementById('virtue-sliders');
+  if (!container) return;
+  container.innerHTML = '';
+  TAXONOMY.virtues.forEach(v => {
+    const val = virtueRatings[v.key] !== undefined ? virtueRatings[v.key] : '';
+    const row = document.createElement('div');
+    row.className = 'virtue-row';
+    row.innerHTML = `
+      <label class="virtue-label" title="${v.en}">${v.label}</label>
+      <input type="range" class="virtue-slider" min="0" max="10" step="1"
+        value="${val !== '' ? val : 5}"
+        data-key="${v.key}"
+        oninput="setVirtue('${v.key}', this.value); updatePreview();"
+        ${val === '' ? 'style="opacity:0.35"' : ''}>
+      <span class="virtue-value" id="vval-${v.key}">${val !== '' ? val : '—'}</span>
+      <button class="virtue-clear" onclick="clearVirtue('${v.key}')" title="clear">×</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function setVirtue(key, val) {
+  virtueRatings[key] = parseInt(val);
+  const el = document.getElementById('vval-' + key);
+  if (el) el.textContent = val;
+  const slider = document.querySelector(`.virtue-slider[data-key="${key}"]`);
+  if (slider) slider.style.opacity = '1';
+}
+
+function clearVirtue(key) {
+  delete virtueRatings[key];
+  renderVirtues();
+  updatePreview();
+}
+
+function renderGroup(containerId, items, cls, group) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  items.forEach(item => {
+    const tag = document.createElement('span');
+    tag.className = 'tag ' + (item.cls || cls);
+    tag.textContent = item.label;
+    tag.dataset.key = item.key;
+    tag.dataset.group = group;
+    tag.onclick = () => toggleTag(group, item.key, tag);
+    el.appendChild(tag);
+  });
+}
+
+function toggleTag(group, key, el) {
+  if (selectedTags[group].has(key)) {
+    selectedTags[group].delete(key);
+    el.classList.remove('selected');
+  } else {
+    if (group === 'valence') { selectedTags.valence.clear(); updateTagVisuals(); }
+    if (group === 'epistemic') { selectedTags.epistemic.clear(); updateTagVisuals(); }
+    selectedTags[group].add(key);
+    el.classList.add('selected');
+  }
+  updatePreview();
+}
+
+function updateTagVisuals() {
+  ['domain-tags','register-tags','valence-tags','epistemic-tags'].forEach(id => {
+    document.querySelectorAll(`#${id} .tag`).forEach(el => {
+      el.classList.toggle('selected', selectedTags[el.dataset.group]?.has(el.dataset.key));
+    });
+  });
+}
+
+function getAllSelectedTags() {
+  return [...selectedTags.domains, ...selectedTags.registers, ...selectedTags.valence, ...selectedTags.epistemic];
+}
+
+function updatePreview() {
+  const note = notes[currentIndex];
+  if (!note) return;
+  const tags = getAllSelectedTags();
+  const domains = [...selectedTags.domains];
+  const registers = [...selectedTags.registers];
+  const valence = [...selectedTags.valence];
+  const epistemic = [...selectedTags.epistemic];
+
+  const previewEl = document.getElementById('preview-tags');
+  previewEl.innerHTML = tags.length === 0
+    ? '<span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">none selected</span>'
+    : tags.map(t => `<span class="preview-tag">#${t}</span>`).join('');
+
+  document.getElementById('output-preview').textContent =
+`---\ncreated: ${note.date || new Date().toISOString().split('T')[0]}\nsource: ${note.source || 'logseq-import'}\nauto: false${domains.length ? '\\ndomains: ['+domains.join(', ')+']' : ''}${registers.length ? '\\nregisters: ['+registers.join(', ')+']' : ''}${valence.length ? '\\nvalence: '+valence[0] : ''}${epistemic.length ? '\\nepistemic: '+epistemic[0] : ''}${virtueLines}${tags.length ? '\\ntags: ['+tags.join(', ')+']' : ''}\n---\n\n${document.getElementById('note-text').value}`;
+}
+
+function getCurrentText() {
+  return document.getElementById('note-text').value.trim();
+}
+
+function saveAndNext() {
+  const editedNote = { ...notes[currentIndex], text: getCurrentText() };
+  results.push({
+    note: editedNote,
+    tags: getAllSelectedTags(),
+    selectedTags: {
+      domains: new Set(selectedTags.domains),
+      registers: new Set(selectedTags.registers),
+      valence: new Set(selectedTags.valence),
+      epistemic: new Set(selectedTags.epistemic)
+    },
+    virtueRatings: { ...virtueRatings },
+    action: 'tagged'
+  });
+  stats.tagged++; currentIndex++; renderNote(); updateStats();
+}
+
+function skipNote() {
+  const editedNote = { ...notes[currentIndex], text: getCurrentText() };
+  results.push({ note: editedNote, tags: [], virtueRatings: { ...virtueRatings }, action: 'skipped' });
+  stats.skipped++; currentIndex++; renderNote(); updateStats();
+}
+
+function deleteNote() {
+  results.push({ note: notes[currentIndex], tags: [], action: 'discarded' });
+  stats.discarded++; currentIndex++; renderNote(); updateStats();
+}
+
+function undoLast() {
+  if (results.length === 0) return;
+  const last = results.pop();
+  if (last.action === 'tagged') stats.tagged--;
+  else if (last.action === 'skipped') stats.skipped--;
+  else if (last.action === 'discarded') stats.discarded--;
+  currentIndex--;
+  if (document.getElementById('done-state').style.display !== 'none') {
+    document.getElementById('done-state').style.display = 'none';
+    document.getElementById('triage-view').style.display = 'flex';
+  }
+  renderNote(); updateStats();
+}
+
+function updateStats() {
+  document.getElementById('stat-tagged').textContent = stats.tagged;
+  document.getElementById('stat-skipped').textContent = stats.skipped;
+  document.getElementById('stat-discarded').textContent = stats.discarded;
+  document.getElementById('stat-remaining').textContent = Math.max(0, notes.length - currentIndex);
+}
+
+function updateProgress() {
+  const pct = notes.length > 0 ? Math.round((currentIndex / notes.length) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${currentIndex} / ${notes.length}`;
+}
+
+function showDone() {
+  document.getElementById('triage-view').style.display = 'none';
+  document.getElementById('done-state').style.display = 'flex';
+  document.getElementById('done-summary').textContent =
+    `${stats.tagged} tagged · ${stats.skipped} skipped · ${stats.discarded} discarded`;
+  const skipBtn = document.getElementById('export-skipped-btn');
+  const hint = document.getElementById('done-hint');
+  const taggedBtn = document.querySelector('.done-state .export-btn');
+  if (taggedBtn) {
+    if (stats.tagged === 0) { taggedBtn.disabled = true; taggedBtn.style.opacity = '0.3'; }
+    else { taggedBtn.disabled = false; taggedBtn.style.opacity = '1'; }
+  }
+  if (stats.skipped === 0) {
+    skipBtn.disabled = true; skipBtn.style.opacity = '0.3';
+    hint.textContent = stats.tagged === 0 ? 'nothing to export this session' : 'no skipped notes this session';
+  } else {
+    skipBtn.disabled = false; skipBtn.style.opacity = '1';
+    hint.textContent = `skipped-notes.md will contain ${stats.skipped} note${stats.skipped !== 1 ? 's' : ''} for review`;
+  }
+  updateProgress();
+  document.querySelectorAll('.md-line.active-note').forEach(el => el.classList.remove('active-note'));
+}
+
+function buildObsidianNote(result) {
+  const { note, selectedTags, tags } = result;
+  const domains = selectedTags ? [...selectedTags.domains] : [];
+  const registers = selectedTags ? [...selectedTags.registers] : [];
+  const valence = selectedTags ? [...selectedTags.valence] : [];
+  const allTags = tags || [];
+  const epistemic = selectedTags ? [...selectedTags.epistemic] : [];
+  const virtues = result.virtueRatings || {};
+  const virtueLines = Object.entries(virtues).map(([k, v]) => {
+    const virt = TAXONOMY.virtues.find(x => x.key === k);
+    return virt ? `\n${virt.greek} (${virt.en}): ${v}/10` : '';
+  }).join('');
+  const autoValue = result.action === 'tagged' ? 'false' : 'pending';
+  return `---
+created: ${note.date || new Date().toISOString().split('T')[0]}
+source: ${note.source || 'logseq-import'}
+auto: ${autoValue}${domains.length ? '\ndomains: ['+domains.join(', ')+']' : ''}${registers.length ? '\nregisters: ['+registers.join(', ')+']' : ''}${valence.length ? '\nvalence: '+valence[0] : ''}${epistemic.length ? '\nepistemic: '+epistemic[0] : ''}${virtueLines}${allTags.length ? '\ntags: ['+allTags.join(', ')+']' : ''}
+---
+
+${note.text}
+`;
+}
+
+function downloadBlob(content, filename) {
+  const blob = new Blob([content], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportAll() {
+  const tagged = results.filter(r => r.action === 'tagged');
+  if (tagged.length === 0) { alert('No tagged notes to export yet.'); return; }
+  tagged.forEach((result, i) => {
+    const date = result.note.date || new Date().toISOString().split('T')[0];
+    downloadBlob(buildObsidianNote(result), `${date}-note-${String(i+1).padStart(3,'0')}.md`);
+  });
+}
+
+function exportSkipped() {
+  const skipped = results.filter(r => r.action === 'skipped');
+  if (skipped.length === 0) { alert('No skipped notes to export.'); return; }
+  const today = new Date().toISOString().split('T')[0];
+  const lines = [
+    `# Skipped notes — ${today}`,
+    '',
+    '> These notes were skipped during triage and have not been added to the Obsidian vault.',
+    '> Review and either tag them manually or discard.',
+    ''
+  ];
+  skipped.forEach(r => {
+    lines.push(`## ${r.note.date || 'undated'}`);
+    lines.push('');
+    lines.push(r.note.text);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+  });
+  downloadBlob(lines.join('\n'), `skipped-notes-${today}.md`);
+}
+
+/* RESIZE */
+const handle = document.getElementById('resize-handle');
+const mdPanel = document.getElementById('md-panel');
+let isResizing = false;
+
+handle.addEventListener('mousedown', e => {
+  isResizing = true;
+  handle.classList.add('dragging');
+  document.body.style.userSelect = 'none';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', e => {
+  if (!isResizing) return;
+  const workspace = document.querySelector('.workspace');
+  const rect = workspace.getBoundingClientRect();
+  const newWidth = Math.max(180, Math.min(e.clientX - rect.left, rect.width * 0.55));
+  mdPanel.style.width = newWidth + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  isResizing = false;
+  handle.classList.remove('dragging');
+  document.body.style.userSelect = '';
+});
+
+/* KEYBOARD */
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.target.tagName === 'TEXTAREA') {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveAndNext();
+    return;
+  }
+  if (document.getElementById('triage-view').style.display === 'none') return;
+  if (e.key === 'Enter') saveAndNext();
+  else if (e.key === 's' || e.key === 'S') skipNote();
+  else if (e.key === 'u' || e.key === 'U') undoLast();
+  else if (e.key === 'd' || e.key === 'D') deleteNote();
+  else if (e.key === 'e' || e.key === 'E') exportAll();
+});
+
+updateStats();
+</script>
+</body>
+</html>
