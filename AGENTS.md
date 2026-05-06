@@ -177,25 +177,8 @@ Lightweight table for decisions actively shaping current work. Full context in `
 
 ---
 
-## Open Questions
+## Open Questions and Next Steps
 
-- **Shokz button interception** — AVRCP via D-Bus on nixbox untested; BTHome Shelly BLU (~£15) is fallback
-- **Bluetooth dongle HFP** — Edimax on nixbox untested for HFP mic input; CSR chipset dongle as fallback
-- **Headset selection** — Shokz (current, zero cost) vs Plantronics Voyager Legend 50 UC (cleaner Linux HFP, USB dongle, ~£40 refurbished)
-- **Obsidian sync to laptop** — Syncthing planned when Linux laptop acquired
-- **Logseq access from T490s** — SSHFS over SSH is the candidate; no decision made
-- **Whisper model size** — tiny vs base trade-off on nixbox (speed vs accuracy); untested
-- **Automated pipeline LLM** — Ollama for auto-tagging deferred until agent hardware acquired
-- **Logseq as primary browsing interface** — relationship between Logseq graph and Obsidian vault still forming; requirements emerging through use
-- **docs/security/security.md** — not yet created; needed before FastAPI service goes live
-- **Pi Bluetooth** — whether Pi HFP setup is sufficiently simpler than nixbox for portable dictation
+See proposed ADRs in `docs` folder.
 
 ---
-
-## Next Discovery Steps
-
-1. Test Shokz AVRCP button events via D-Bus on nixbox — determines whether additional button hardware is needed
-2. Test Edimax dongle HFP mic input with Shokz on nixbox under PipeWire
-3. Initialise bare Git repos on nixbox (`vault.git`, `logseq.git`)
-4. Write ADR-010 for FastAPI capture service (Proposed) — this IS the spec
-5. Begin Pi NixOS install
