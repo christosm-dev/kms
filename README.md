@@ -27,7 +27,7 @@ Start with `AGENTS.md` for current status and next steps. Start with `docs/adr/R
 
 ## Current structure
 
-### Triage tool (`note-triage.html`)
+### Triage tool (`src/note-triage.html`)
 Self-contained single HTML file. No build step, no server required. Loads a Logseq Markdown export, presents one note at a time for structured tagging, and exports Obsidian-ready `.md` files locally. Also exports skipped notes as a review file. Run in any browser — nothing leaves the machine.
 
 ### Architecture Decision Records (`docs/adr/`)
